@@ -1,0 +1,98 @@
+첫번째 방법
+
+yarn add -D typescript ts-node
+
+go to the package.json file and see a new devDependencies object:
+
+"devDependencies": {
+  "ts-node": "8.10.2",
+  "typescript": "3.9.5"
+}
+
+Next, create a tsconfig.json file at the root of the development server project.
+This file allows you to customize TypeScript configuration and add other configurations to compile the TypeScript project:
+
+{
+  "compilerOptions": {
+    "target": "es6",
+    "module": "commonjs",
+    "rootDir": "./",
+    "outDir": "./build",
+    "esModuleInterop": true,
+    "strict": true
+  }
+}
+
+
+yarn add -D @types/node @types/express
+
+Notice the versions of these packages installed in package.json file:
+
+"devDependencies": {
+    "@types/express": "4.17.6",
+    "@types/node": "14.0.13",
+    "ts-node": "8.10.2",
+    "typescript": "3.9.5"
+}
+
+Open index.ts file. You can now use the import statements from ES6. The only required package right now in the index.ts file is express.
+
+yarn add -D nodemon
+nodemon is a tool that helps develop Node.js based applications by automatically restarting the Node application when file changes in the directory are detected. To use it, you may add a start script in the package.json file as specified below:
+
+"scripts": {
+    "start": "nodemon index.ts",
+},
+
+To compile a TypeScript project to a valid JavaScript one, start by declaring a new script called build inside the package.json file:
+
+"scripts": {
+    "build": "tsc --project ./",
+},
+
+
+TypeScript provides a command to compile the code called tsc
+
+
+
+
+
+
+두번째 방법
+
+노드js에 타입스크립트 사용
+npm init --yes
+yarn add express
+yarn add -D typescript ts-node
+tsc -init
+하면 
+{
+  "compilerOptions": {
+    "target": "es6",
+    "module": "commonjs",
+    "rootDir": "./",
+    "outDir": "./build",
+    "esModuleInterop": true,
+    "strict": true
+  }
+}
+이렇게 설정
+
+yarn add -D @types/node @types/express
+yarn add -D nodemon
+"scripts": {
+    "start": "nodemon index.ts",
+},
+이렇게 설정
+
+
+
+
+
+
+
+
+
+
+
+
