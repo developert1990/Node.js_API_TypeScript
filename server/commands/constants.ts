@@ -1,5 +1,9 @@
-export const getAllProductOption = `
+export const findAllProductOption = `
 select * from ProductOptions
+`;
+
+export const findAllProducts = `
+select * from Products
 `;
 
 export const getSearchProductByName = `

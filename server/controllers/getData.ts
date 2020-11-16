@@ -4,7 +4,7 @@ import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
 import { getConnection } from '../index';
 
-import { getAllProductOption, createUUID } from '../commands/constants';
+import { findAllProductOption, findAllProducts, createUUID } from '../commands/constants';
 
 
 const app = express();
@@ -60,47 +60,45 @@ export const getAllProducts = async (req: Request, res: Response) => {
 
     // console.log('req name: ', req.query.name);
     const db = await getConnection();
+
     if (req.query.name === undefined) {
         // 1. gets all products
-        // db.all(getAllProductOption, (err, row) => {
-        //     res.send(row);
-        // });
-        const row = await db.all(getAllProductOption);
-        // res.send(`${res.json({msg:'No data with this name', state:403})}`);
-        res.send(`${res.json({ msg: 'No data with this name', state: 403 })}`)
-    } else {
-        // 2. finds all products matching the specified name.
-        const name = req.query.name;
-        const newName = name.toString().charAt(0).toUpperCase() + name.toString().slice(1);
-        const rows = await db.all('select * from table', [newName])
 
-        if (!rows) {
-            // 이것도 웬만하면 json으로 돌려보내주는게 좋긴합니다 어차피 이걸 받는쪽도 그래야 쓰기가 편하거든요
-            // 그리고 웬만하면 콜백대신 async/await 해주시는게 더 좋고요 ㅎㅎ
-            res.send(`${res.json({ msg: 'No data with this name', state: 403 })}`);
+        const rows = await db.all(findAllProducts);
+        if (rows.length === 0) {
+            res.send({ msg: 'No data founded', state: 500 });
         } else {
             res.send(rows);
         }
+    } else {
+        // 2. finds all products matching the specified name.
 
+        const name = req.query.name;
+        const newName = name.toString().charAt(0).toUpperCase() + name.toString().slice(1);
 
-        // 요건 이 라이브러리 npm문서에 나오네요 사용법
-
+        const rows = await db.all(`select * from Products where name like ?`, [`%${newName}%`]);
+        if (rows.length === 0) {
+            res.send({ msg: 'No data with this name', state: 500 });
+        } else {
+            res.send(rows);
+        }
 
     }
 
 }
 
-// 3. gets the project that matches the specified ID - ID is a GUID.
+// /0643CCF0-AB00-4862-B3C5-40E2731ABCC9
+
+// 3. gets the productsOptions that matches the specified ID - ID is a GUID.
 
 export const getProductByID = async (req: Request, res: Response) => {
-    // console.log('req.params', req.params);
     const db = await getConnection();
     if (req.params.id !== undefined) {
+
         const id = req.params.id
-        db.serialize();
-        const { err, rows } = await db.get(`select * from ProductOptions where id = ?`, [id]);
+        const rows = await db.get(`select * from ProductOptions where id = ?`, [id]);
         if (!rows) {
-            res.send(`${res.send('No data with this ID')} ,${err?.message}`);
+            res.send({ msg: 'No data with this id', state: 500 });
         } else {
             res.send(rows);
         }
@@ -112,7 +110,6 @@ export const getProductByID = async (req: Request, res: Response) => {
 // 4. Creates a new product with POST method.
 
 export const createProduct = async (req: Request, res: Response) => {
-    console.log(req.body);
 
     const db = await getConnection();
 
@@ -123,13 +120,9 @@ export const createProduct = async (req: Request, res: Response) => {
     const rows = await db.run(`INSERT INTO Products VALUES (?,?,?,?,?)`,
         [UUID_ID, productsInfo.Name, productsInfo.Description, productsInfo.Price, productsInfo.DeliveryPrice]);
 
-    if (!rows) {
-        res.send(res.json({ status: 403, msg: "Data can not be inserted" }))
-    } else {
-        console.log('Data inserted into Products successfully');
-    }
 
-    res.send('All data inserted Successfully')
+    res.send('Data inserted into Products successfully');
+
 }
 
 // {
@@ -142,21 +135,21 @@ export const createProduct = async (req: Request, res: Response) => {
 
 
 // 5. updates a product
-
+// 이부분 좀 여쭤 봐야함
 export const updateProducts = async (req: Request, res: Response) => {
 
-    console.log(req.params);
-    console.log(req.body);
     const db = await getConnection();
     const id: string = req.params.id;
     const data: types.productInfoType = req.body;
-    db.run(`UPDATE Products SET Name='${data.Name}', Description='${data.Description}', Price='${data.Price}', DeliveryPrice='${data.DeliveryPrice}' where Id='${id}'`, (err: { message: any; }) => {
-        if (err) {
-            console.log(err.message);
-        } else {
-            console.log('Data inserted into ProductOption successfully');
-        }
-    });
+
+    const result = await db.run(`UPDATE Products SET Name=?, Description=?, Price=?, DeliveryPrice=? where Id=?`, [data.Name, data.Description, data.Price, data.DeliveryPrice, id]);
+    console.log('result', result)
+    // if (err) {
+    //     console.log(err.message);
+    // } else {
+    //     console.log('Data inserted into ProductOption successfully');
+    // }
+
     res.send('All data updated Successfully')
 }
 
@@ -168,29 +161,29 @@ export const updateProducts = async (req: Request, res: Response) => {
 //     },
 
 
+
+
 // 6. delete a product and its options
 
 export const deleteProductAndOptions = async (req: Request, res: Response) => {
-    console.log(req.params.id);
     const db = await getConnection();
     const id: string = req.params.id;
-    db.run(`DELETE FROM Products where Id= '${id}'`, (err: { message: any; }) => {
-        if (err) {
-            console.log(err.message);
-        } else {
-            console.log(`Data deleted successfully`);
-        }
-    });
 
-    db.run(`DELETE FROM ProductOptions where ProductId= '${id}'`, (err: { message: any; }) => {
-        if (err) {
-            console.log(err.message);
-        } else {
-            console.log(`Data deleted successfully`);
-        }
-    });
+    const rows_1 = await db.run(`DELETE FROM Products where Id= ?`, [id]);
+    console.log('rows_1', rows_1)
+    if (!rows_1) {
+        res.send({ msg: 'No data with this id', state: 500 });
+    } else {
+        res.send(`Data deleted successfully`);
+    }
 
-    res.send(`Data deleted successfully`);
+    const rows_2 = await db.run(`DELETE FROM ProductOptions where ProductId= ?`, [id]);
+    if (!rows_2) {
+        res.send({ msg: 'No data with this id', state: 500 });
+    } else {
+        res.send(`Data deleted successfully`);
+    }
+
 }
 
 
@@ -214,14 +207,17 @@ export const deleteProductAndOptions = async (req: Request, res: Response) => {
 export const findAllOptionsByOptionId = async (req: Request, res: Response) => {
     const db = await getConnection();
     console.log(req.params.id);
-    const id = req.params.id;
-    db.all(`Select * from ProductOptions where productid ='${id}'`, (err: { message: any; }, row: any) => {
-        if (!row) {
-            console.log(err?.message);
-        } else {
-            res.send(row);
-        }
-    });
+    const productId = req.params.id;
+
+    const rows = await db.all(`Select * from ProductOptions where productid =?`, [productId])
+
+    if (rows.length === 0) {
+        res.send({ msg: 'No data with this id', state: 500 })
+    } else {
+        res.send(rows);
+    }
+
+
 }
 
 
@@ -234,53 +230,52 @@ export const findOptionsByOptionId = async (req: Request, res: Response) => {
     const optionId = req.params.optionId;
     console.log('optionId', optionId)
     console.log('id', id)
-    db.all(`Select * from ProductOptions where productid ='${id}' and id='${optionId}'`, (err: { message: any; }, row: any) => {
-        if (!row) {
-            console.log(err?.message);
-        } else {
-            res.send(row);
-        }
-    });
+
+    const rows = await db.all(`Select * from ProductOptions where id=? and productid =?`, [id, optionId]);
+    if (rows.length === 0) {
+        res.send({ msg: 'No data with this id', state: 500 })
+    } else {
+        res.send(rows);
+    }
+
 }
 
 // 9. adds a new product option to the specified product.
 export const addNewOptions = async (req: Request, res: Response) => {
-    console.log('뉴 옵션추가');
     const db = await getConnection();
     const UUID_ProductID: string = req.params.id;
     const id: string = createUUID().toUpperCase();
     const productOptionInfo: types.productInfoType = req.body;
 
     // insert into ProductOptions table
-    db.run(`INSERT INTO ProductOptions VALUES ('${id}', '${UUID_ProductID}', '${productOptionInfo.Name}', '${productOptionInfo.Description}')`, (err: { message: any; }) => {
-        if (err) {
-            console.log(err.message);
-        } else {
-            console.log('Data inserted into ProductOption successfully');
-        }
-    });
-    res.send('Added specified options into ProductOptions table');
+    const rows = await db.run(`INSERT INTO ProductOptions VALUES (?,?,?,?)`, [id, UUID_ProductID, productOptionInfo.Name, productOptionInfo.Description])
+    if (!rows) {
+        res.send({ msg: 'No data with this id', state: 500 });
+    } else {
+        res.send(`Data inserted into ProductOption successfully`);
+    }
+
 }
 
 // 10. updates the specified product option.
 export const updateOptions = async (req: Request, res: Response) => {
 
 
-    console.log(req.params.id);
-    console.log(req.params.optionId);
     const db = await getConnection();
     const id: string = req.params.id;
     const optionId: string = req.params.optionId;
     const data: types.productOptionInfoType = req.body;
 
-    db.run(`UPDATE ProductOptions SET Name='${data.Name}', Name='${data.Name}',  Description='${data.Description}' where ProductId='${id}' and id='${optionId}'`, (err: { message: any; }) => {
-        if (err) {
-            console.log(err.message);
-        } else {
-            console.log('Data inserted into ProductOption successfully');
-        }
-    });
-    res.send('All options updated Successfully')
+
+    const rows = await db.run(`UPDATE ProductOptions SET Name=?,  Description=? where ProductId=? and id=?`, [data.Name, data.Description, id, optionId])
+
+    if (rows.changes === 0) {
+        res.send({ msg: 'No data with this id', state: 500 });
+    } else {
+        res.send(`Data changed into ProductOption successfully`);
+    }
+
+
 
 }
 
@@ -293,15 +288,14 @@ export const deleteOptions = async (req: Request, res: Response) => {
     const productId = req.params.id;
     const optionId = req.params.optionId;
 
-    db.run(`DELETE FROM ProductOptions where ProductId= '${productId}' and Id ='${optionId}'`, (err: { message: any; }) => {
-        if (err) {
-            console.log(err.message);
-        } else {
-            console.log(`Data deleted successfully`);
-        }
-    });
 
-    res.send('All options deleted Successfully')
+    const rows = await db.run(`DELETE FROM ProductOptions where ProductId= ? and Id =?`, [productId, optionId]);
+    console.log('rows', rows.changes)
+    if (rows.changes === 0) {
+        res.send({ msg: 'No data deleted with this id', state: 500 });
+    } else {
+        res.send('Data deleted successfully')
+    }
 }
 
 

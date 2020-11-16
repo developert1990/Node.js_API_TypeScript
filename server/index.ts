@@ -5,7 +5,7 @@ import { open } from 'sqlite';
 import './controllers/getData';
 import * as controllData from './controllers/getData';
 import bodyParser from 'body-parser';
-import { testValidator } from './middlewares';
+import { testValidator, newOptionValidator } from './middlewares';
 
 const app = express();
 const PORT = 8001;
@@ -15,21 +15,21 @@ app.use(cors());
 
 // 이렇게 하면 built in 된 body-parser의 역할을 수행할수가 있다.
 app.use(express.json());
-// app.get('/', (req, res) => {
-//     res.send('Express + TypeScript Server');
-// });
+
 app.get('/', controllData.connect);
+
+
 // 1. gets all products , // 2. finds all products matching the specified name.
 app.get('/products', controllData.getAllProducts);
 
-// 3. gets the project that matches the specified ID - ID is a GUID.
+// 3. gets the productsOptions that matches the specified ID - ID is a GUID.
 app.get('/products/:id', controllData.getProductByID);
 
 // 4. Creates a new product with POST method.
 app.post('/products', testValidator, controllData.createProduct);
 
 // 5. updates a product
-app.put('/products/:id', controllData.updateProducts);
+app.put('/products/:id', testValidator, controllData.updateProducts);
 
 // 6. delete a product and its options
 app.delete('/products/:id', controllData.deleteProductAndOptions);
@@ -42,7 +42,7 @@ app.get('/products/:id/options', controllData.findAllOptionsByOptionId);
 app.get('/products/:id/options/:optionId', controllData.findOptionsByOptionId);
 
 // 9. adds a new product option to the specified product.
-app.post('/products/:id/options', controllData.addNewOptions);
+app.post('/products/:id/options', newOptionValidator, controllData.addNewOptions);
 
 // 10. updates the specified product option.
 app.put('/products/:id/options/:optionId', controllData.updateOptions)
@@ -76,10 +76,11 @@ app.delete('/products/:id/options/:optionId', controllData.deleteOptions);
 // 컨트롤러로 와보세용 겟데이터
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-    if (!err) return next();
+    console.log('여기 에러 헨들로 온다')
+    if (!err) return next(); // 어떠한 데이터 적인 에러를 핸들링하는 곳에서 에러가 리턴이 된게 아니면 밑에 91번으로 넘어간다.
     res.status(500).json({
         status: 'error',
-        message: JSON.stringify(err),
+        message: JSON.stringify(err.message),
     });
 });
 
@@ -116,7 +117,7 @@ app.listen(PORT, () => {
 
 export const getConnection = async () => {
     const db = await open({
-        filename: 'C:/Temp/sqlite_practice/src/db/products.db',
+        filename: './data/products.db',
         driver: sqlite3.Database,
     });
     return db;
