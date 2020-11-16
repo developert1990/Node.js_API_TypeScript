@@ -5,7 +5,7 @@ import { open } from 'sqlite';
 import './controllers/getData';
 import * as controllData from './controllers/getData';
 import bodyParser from 'body-parser';
-import { testValidator, newOptionValidator } from './middlewares';
+import { productValidator, newOptionValidator } from './middlewares';
 
 const app = express();
 const PORT = 8001;
@@ -26,10 +26,10 @@ app.get('/products', controllData.getAllProducts);
 app.get('/products/:id', controllData.getProductByID);
 
 // 4. Creates a new product with POST method.
-app.post('/products', testValidator, controllData.createProduct);
+app.post('/products', productValidator, controllData.createProduct);
 
 // 5. updates a product
-app.put('/products/:id', testValidator, controllData.updateProducts);
+app.put('/products/:id', productValidator, controllData.updateProducts);
 
 // 6. delete a product and its options
 app.delete('/products/:id', controllData.deleteProductAndOptions);
@@ -45,7 +45,7 @@ app.get('/products/:id/options/:optionId', controllData.findOptionsByOptionId);
 app.post('/products/:id/options', newOptionValidator, controllData.addNewOptions);
 
 // 10. updates the specified product option.
-app.put('/products/:id/options/:optionId', controllData.updateOptions)
+app.put('/products/:id/options/:optionId', newOptionValidator, controllData.updateOptions)
 
 // 11. deletes the specified product option.
 app.delete('/products/:id/options/:optionId', controllData.deleteOptions);
